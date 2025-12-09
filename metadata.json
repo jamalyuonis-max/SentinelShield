@@ -1,0 +1,5 @@
+{
+  "name": "SentinelShield",
+  "description": "Enterprise-grade Endpoint Protection Platform (EPP) and EDR dashboard featuring real-time monitoring, AI-driven threat analysis, and automated remediation workflows.",
+  "requestFramePermissions": []
+}
