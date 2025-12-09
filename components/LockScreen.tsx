@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, ChevronRight, ShieldCheck } from 'lucide-react';
+import { Lock, ChevronRight, ShieldCheck, HelpCircle } from 'lucide-react';
 
 interface LockScreenProps {
     onUnlock: () => void;
@@ -8,11 +8,12 @@ interface LockScreenProps {
 export const LockScreen: React.FC<LockScreenProps> = ({ onUnlock }) => {
     const [pin, setPin] = useState('');
     const [error, setError] = useState(false);
+    const [showHint, setShowHint] = useState(false);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         // Mock PIN validation - accept '1234' or any 4 digit pin for demo purposes if empty
-        if (pin === '1234' || pin.length === 4) {
+        if (pin === '1234') {
             onUnlock();
         } else {
             setError(true);
@@ -23,7 +24,7 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlock }) => {
 
     return (
         <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center p-4">
-            <div className="w-full max-w-md">
+            <div className="w-full max-w-md animate-fade-in">
                 <div className="text-center mb-10">
                     <div className="w-20 h-20 bg-emerald-500 rounded-2xl flex items-center justify-center shadow-2xl shadow-emerald-500/20 mx-auto mb-6 transform rotate-3 hover:rotate-0 transition-transform duration-500">
                         <ShieldCheck className="text-white w-10 h-10" />
@@ -56,7 +57,7 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlock }) => {
                         
                         <button 
                             type="submit"
-                            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-3 rounded-lg transition-colors flex items-center justify-center gap-2 group"
+                            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-3 rounded-lg transition-colors flex items-center justify-center gap-2 group shadow-lg shadow-emerald-600/20"
                         >
                             Unlock Console
                             <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -64,8 +65,22 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlock }) => {
                     </form>
                     
                     {error && (
-                        <p className="text-rose-500 text-xs text-center mt-4 animate-pulse">
+                        <p className="text-rose-500 text-xs text-center mt-4 animate-pulse font-medium">
                             Incorrect PIN. Please try again.
+                        </p>
+                    )}
+
+                    <div className="mt-4 flex justify-center">
+                        <button 
+                            onClick={() => setShowHint(!showHint)}
+                            className="text-slate-600 hover:text-slate-400 text-xs flex items-center gap-1 transition-colors"
+                        >
+                            <HelpCircle className="w-3 h-3" /> {showHint ? 'Hide Hint' : 'Forgot PIN?'}
+                        </button>
+                    </div>
+                    {showHint && (
+                        <p className="text-slate-500 text-xs text-center mt-2 animate-in fade-in">
+                            Default PIN for demo: <span className="font-mono text-emerald-500">1234</span>
                         </p>
                     )}
                 </div>

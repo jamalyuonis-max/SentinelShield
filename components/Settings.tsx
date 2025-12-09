@@ -1,19 +1,53 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ToggleLeft, ToggleRight, Shield, Cloud, Bell, Cpu, Wifi } from 'lucide-react';
 
-export const Settings: React.FC = () => {
-    const [settings, setSettings] = useState({
-        realTimeProtection: true,
-        cloudAnalysis: true,
-        notifications: true,
-        gamingMode: false,
-        autoUpdate: true,
-        networkFilter: true
-    });
+interface SettingsState {
+    realTimeProtection: boolean;
+    cloudAnalysis: boolean;
+    notifications: boolean;
+    gamingMode: boolean;
+    autoUpdate: boolean;
+    networkFilter: boolean;
+}
 
-    const toggle = (key: keyof typeof settings) => {
+const DEFAULT_SETTINGS: SettingsState = {
+    realTimeProtection: true,
+    cloudAnalysis: true,
+    notifications: true,
+    gamingMode: false,
+    autoUpdate: true,
+    networkFilter: true
+};
+
+export const Settings: React.FC = () => {
+    const [settings, setSettings] = useState<SettingsState>(DEFAULT_SETTINGS);
+    const [loaded, setLoaded] = useState(false);
+
+    // Load from localStorage on mount
+    useEffect(() => {
+        const saved = localStorage.getItem('sentinel_settings');
+        if (saved) {
+            try {
+                setSettings(JSON.parse(saved));
+            } catch (e) {
+                console.error("Failed to parse settings", e);
+            }
+        }
+        setLoaded(true);
+    }, []);
+
+    // Save to localStorage on change
+    useEffect(() => {
+        if (loaded) {
+            localStorage.setItem('sentinel_settings', JSON.stringify(settings));
+        }
+    }, [settings, loaded]);
+
+    const toggle = (key: keyof SettingsState) => {
         setSettings(prev => ({ ...prev, [key]: !prev[key] }));
     };
+
+    if (!loaded) return null;
 
     return (
         <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ScanType } from '../types';
-import { Play, Square, FileCheck, FolderSearch, HardDrive, AlertTriangle, Trash2, CheckCircle, ShieldAlert, Loader, Shield, X } from 'lucide-react';
+import { Play, Square, FileCheck, FolderSearch, HardDrive, AlertTriangle, Trash2, CheckCircle, ShieldAlert, Loader, Shield, X, FileX } from 'lucide-react';
 
 type ScanStatus = 'idle' | 'scanning' | 'review' | 'cleaning' | 'finished';
 
@@ -26,6 +26,7 @@ export const ScanCenter: React.FC = () => {
   const [currentFile, setCurrentFile] = useState('');
   const [scanType, setScanType] = useState<ScanType | null>(null);
   const [detectedThreats, setDetectedThreats] = useState<DetectedThreat[]>([]);
+  const [cleanedCount, setCleanedCount] = useState(0);
   const [history, setHistory] = useState<ScanHistoryItem[]>([
       { id: 1, type: 'Full System Scan', date: '2 days ago', duration: '45m 12s', threats: 2, status: 'Cleaned' },
       { id: 2, type: 'Quick Scan', date: '3 days ago', duration: '2m 30s', threats: 0, status: 'Clean' },
@@ -59,8 +60,8 @@ export const ScanCenter: React.FC = () => {
 
         // Randomly simulate a threat detection
         if (progress > 10 && progress < 90 && Date.now() > nextThreatCheck.current) {
-            // 10% chance to find a threat every check interval
-            if (Math.random() > 0.85) {
+            // 15% chance to find a threat every check interval, max 3 threats for demo
+            if (Math.random() > 0.85 && detectedThreats.length < 4) {
                 const threatNames = ['Trojan.Win32.Agent', 'Ransom.WannaCry.Gen', 'Adware.Toolbar.Search', 'Spyware.KeyLogger.X', 'Exploit.Heuristic.12'];
                 const severities: ('High' | 'Medium' | 'Low')[] = ['High', 'High', 'Medium', 'High', 'Low'];
                 const idx = Math.floor(Math.random() * threatNames.length);
@@ -86,16 +87,33 @@ export const ScanCenter: React.FC = () => {
        } else {
            finishScan(0);
        }
-    } else if (status === 'cleaning') {
-        // Simulate cleaning delay
-        const timer = setTimeout(() => {
-            finishScan(detectedThreats.length);
-        }, 2000);
-        return () => clearTimeout(timer);
     }
 
     return () => clearInterval(interval);
   }, [status, progress, detectedThreats]);
+
+  // Handle Cleaning Logic Separately
+  useEffect(() => {
+      if (status === 'cleaning') {
+          let cleaned = 0;
+          setCleanedCount(0);
+          const total = detectedThreats.length;
+          
+          const cleanInterval = setInterval(() => {
+              cleaned++;
+              setCleanedCount(cleaned);
+              
+              if (cleaned >= total) {
+                  clearInterval(cleanInterval);
+                  setTimeout(() => {
+                      finishScan(total);
+                  }, 800);
+              }
+          }, 800); // Clean one file every 800ms
+          
+          return () => clearInterval(cleanInterval);
+      }
+  }, [status, detectedThreats]);
 
   const startScan = (type: ScanType) => {
     setScanType(type);
@@ -135,6 +153,7 @@ export const ScanCenter: React.FC = () => {
       setStatus('idle');
       setProgress(0);
       setDetectedThreats([]);
+      setCleanedCount(0);
   };
 
   return (
@@ -148,11 +167,11 @@ export const ScanCenter: React.FC = () => {
       {status === 'scanning' && (
         <div className="bg-slate-800 rounded-2xl border border-slate-700 p-12 text-center relative overflow-hidden shadow-2xl">
           {detectedThreats.length > 0 && (
-             <div className="absolute top-0 left-0 w-full bg-rose-500/10 border-b border-rose-500/20 p-2 text-rose-400 text-sm font-semibold animate-pulse">
-                Threats Detected: {detectedThreats.length}
+             <div className="absolute top-0 left-0 w-full bg-rose-500/10 border-b border-rose-500/20 p-2 text-rose-400 text-sm font-semibold animate-pulse flex items-center justify-center gap-2">
+                <ShieldAlert className="w-4 h-4" /> Threats Detected: {detectedThreats.length}
              </div>
           )}
-          <div className="relative z-10">
+          <div className="relative z-10 pt-4">
             <div className="w-48 h-48 mx-auto mb-8 relative flex items-center justify-center">
               <div className="absolute inset-0 border-4 border-slate-700 rounded-full"></div>
               <div className="absolute inset-0 border-4 border-emerald-500 rounded-full transition-all duration-300" style={{ clipPath: `inset(${100 - progress}% 0 0 0)` }}></div>
@@ -178,7 +197,7 @@ export const ScanCenter: React.FC = () => {
 
       {/* REVIEW THREATS STATE */}
       {status === 'review' && (
-          <div className="bg-slate-900 border border-rose-500/30 rounded-2xl overflow-hidden shadow-2xl shadow-rose-900/20">
+          <div className="bg-slate-900 border border-rose-500/30 rounded-2xl overflow-hidden shadow-2xl shadow-rose-900/20 animate-in fade-in zoom-in-95 duration-300">
               <div className="bg-rose-500/10 p-6 border-b border-rose-500/20 flex items-center gap-4">
                   <div className="p-3 bg-rose-500 rounded-full animate-pulse">
                       <ShieldAlert className="w-8 h-8 text-white" />
@@ -209,7 +228,7 @@ export const ScanCenter: React.FC = () => {
                       <button onClick={resetToIdle} className="px-6 py-3 text-slate-400 hover:text-white font-medium transition-colors">
                           Ignore (Not Recommended)
                       </button>
-                      <button onClick={startCleaning} className="px-8 py-3 bg-rose-600 hover:bg-rose-500 text-white rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-rose-600/20 transition-all hover:scale-105">
+                      <button onClick={startCleaning} className="px-8 py-3 bg-rose-600 hover:bg-rose-500 text-white rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-rose-600/20 transition-all hover:scale-105 active:scale-95">
                           <Trash2 className="w-5 h-5" /> Clean & Quarantine All
                       </button>
                   </div>
@@ -219,16 +238,36 @@ export const ScanCenter: React.FC = () => {
 
       {/* CLEANING STATE */}
       {status === 'cleaning' && (
-          <div className="bg-slate-800 rounded-2xl border border-slate-700 p-16 text-center">
-              <Loader className="w-16 h-16 text-emerald-500 animate-spin mx-auto mb-6" />
+          <div className="bg-slate-800 rounded-2xl border border-slate-700 p-16 text-center animate-fade-in">
+              <div className="relative w-20 h-20 mx-auto mb-6">
+                 <Loader className="w-20 h-20 text-emerald-500 animate-spin" />
+                 <div className="absolute inset-0 flex items-center justify-center font-bold text-white">
+                     {Math.floor((cleanedCount / detectedThreats.length) * 100)}%
+                 </div>
+              </div>
+              
               <h3 className="text-2xl font-bold text-white mb-2">Remediating Threats...</h3>
-              <p className="text-slate-400">Removing malicious files and repairing registry keys.</p>
+              <p className="text-slate-400 mb-6">Securing system integrity and removing malicious files.</p>
+              
+              <div className="max-w-md mx-auto space-y-2">
+                 {detectedThreats.map((threat, idx) => (
+                     <div key={threat.id} className={`flex items-center gap-3 p-3 rounded-lg border transition-all duration-300 ${
+                         idx < cleanedCount 
+                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
+                            : 'bg-slate-900 border-slate-800 text-slate-500 opacity-50'
+                     }`}>
+                         {idx < cleanedCount ? <CheckCircle className="w-5 h-5" /> : <FileX className="w-5 h-5" />}
+                         <span className="text-sm font-mono truncate flex-1 text-left">{threat.name}</span>
+                         <span className="text-xs font-bold uppercase">{idx < cleanedCount ? 'REMOVED' : 'WAITING'}</span>
+                     </div>
+                 ))}
+              </div>
           </div>
       )}
 
       {/* FINISHED / SAFE STATE */}
       {status === 'finished' && (
-          <div className="bg-slate-800 rounded-2xl border border-emerald-500/30 p-12 text-center relative overflow-hidden">
+          <div className="bg-slate-800 rounded-2xl border border-emerald-500/30 p-12 text-center relative overflow-hidden animate-in zoom-in-95 duration-500">
               <div className="absolute inset-0 bg-emerald-500/5 pointer-events-none"></div>
               <div className="w-24 h-24 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl shadow-emerald-500/30">
                   <CheckCircle className="w-12 h-12 text-white" />
@@ -239,7 +278,7 @@ export const ScanCenter: React.FC = () => {
                     ? `Successfully neutralized ${detectedThreats.length} threats. Your endpoint is now safe.` 
                     : 'No threats were found during the scan. Your system is clean.'}
               </p>
-              <button onClick={resetToIdle} className="px-8 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-medium transition-colors">
+              <button onClick={resetToIdle} className="px-8 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-medium transition-colors shadow-lg shadow-emerald-600/20">
                   Return to Dashboard
               </button>
           </div>
@@ -247,7 +286,7 @@ export const ScanCenter: React.FC = () => {
 
       {/* IDLE STATE - OPTIONS */}
       {status === 'idle' && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in">
           <ScanOption 
             title="Quick Scan" 
             desc="Scans critical system areas, active processes, and startup files for active threats." 
@@ -309,13 +348,13 @@ export const ScanCenter: React.FC = () => {
 };
 
 const ScanOption: React.FC<{ title: string, desc: string, icon: React.ReactNode, onStart: () => void }> = ({ title, desc, icon, onStart }) => (
-    <div className="bg-slate-800 border border-slate-700 p-6 rounded-xl hover:border-emerald-500/50 hover:bg-slate-800/80 transition-all cursor-pointer group relative overflow-hidden" onClick={onStart}>
+    <div className="bg-slate-800 border border-slate-700 p-6 rounded-xl hover:border-emerald-500/50 hover:bg-slate-800/80 transition-all cursor-pointer group relative overflow-hidden h-full flex flex-col" onClick={onStart}>
         <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
             {icon}
         </div>
         <div className="mb-4 p-3 bg-slate-900 w-fit rounded-lg group-hover:scale-110 transition-transform relative z-10 border border-slate-800">{icon}</div>
         <h3 className="text-lg font-bold text-white mb-2 relative z-10">{title}</h3>
-        <p className="text-sm text-slate-400 mb-6 min-h-[40px] relative z-10">{desc}</p>
+        <p className="text-sm text-slate-400 mb-6 flex-1 relative z-10">{desc}</p>
         <button className="w-full py-2 bg-slate-700 group-hover:bg-emerald-600 text-white rounded-lg transition-colors font-medium flex items-center justify-center gap-2 relative z-10">
             <Play className="w-4 h-4 fill-current" /> Start Scan
         </button>
